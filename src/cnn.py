@@ -1,4 +1,5 @@
 from tensorflow import keras
+from tensorflow.keras.metrics import AUC
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, Activation, Flatten
 from tensorflow.keras.layers import Conv2D, MaxPooling2D
@@ -6,6 +7,9 @@ from tensorflow.keras.utils import to_categorical
 import numpy as np
 import pandas as pd
 import cv2
+from sklearn.model_selection import KFold
+from imblearn.over_sampling import SMOTE
+from sklearn.preprocessing import LabelEncoder
 
 np.random.seed(1)  # for reproducibility
 
@@ -44,14 +48,26 @@ def reshape_for_tf(df):
     X = df['waferMap'].values
     y = df['failureType']
     
-    # convert class vectors to binary class matrices (don't change)
-    Y = to_categorical(y, 8)
-    
     # Resize to uniform img shape
     X_resize = np.array([cv2.resize(img, dsize=(24,24)) for img in X])
     
+    ### For applying SMOTE to oversample minority classes
+    y_sm = LabelEncoder().fit_transform(y)
+    X_sm_reshape = X_resize.reshape(X_resize.shape[0],24*24)
+    
+    # transform the dataset
+    oversample = SMOTE()
+    X_os, y = oversample.fit_resample(X_sm_reshape, y_sm)
+    
     # Reshape for tf
-    X_tf = X_resize.reshape(X_resize.shape[0], 24, 24, 1).astype('float32')
+    X_tf = X_os.reshape(X_os.shape[0], 24, 24, 1).astype('float32')
+    ###
+    
+    # # Reshape for tf (Without SMOTE)
+    # X_tf = X_resize.reshape(X_resize.shape[0], 24, 24, 1).astype('float32')
+    
+    # convert class vectors to binary class matrices
+    Y = to_categorical(y, 8)
     
     return X_tf, Y
 
@@ -88,7 +104,8 @@ def define_model(nb_filters, kernel_size, input_shape, pool_size):
     # suggest limiting optimizers to one of these: 'adam', 'adadelta', 'sgd'
     model.compile(loss='categorical_crossentropy',
                 optimizer='adam',
-                metrics=['accuracy'])
+                metrics=[AUC()])
+                # metrics=['accuracy'])
     return model
 
 if __name__ == '__main__':
@@ -102,15 +119,35 @@ if __name__ == '__main__':
     pool_size = (2, 2) # pooling decreases image size, reduces computation, adds translational invariance
     kernel_size = (5, 5) # convolutional kernel size, slides over image to learn features
     frac = 1 # Fraction of data to sample
+    num_folds = 5
 
     X_train, X_test, Y_train, Y_test = load_data(frac)
+    
+    kfold = KFold(n_splits = num_folds, shuffle = True)
+    
+    # initialize kfold variables
+    fold_num = 1
+    acc_per_fold = []
+    loss_per_fold = []
+    
+    for train, val in kfold.split(X_train, Y_train):
+        model = define_model(nb_filters, kernel_size, input_shape, pool_size)
+        
+        # Generate a print
+        print('------------------------------------------------------------------------')
+        print(f'Training for fold {fold_num} ...')
 
-    model = define_model(nb_filters, kernel_size, input_shape, pool_size)
+        # during fit process watch train and test error simultaneously
+        model.fit(X_train[train], Y_train[train], batch_size=batch_size, epochs=nb_epoch,
+                verbose=1)
 
-    # during fit process watch train and test error simultaneously
-    model.fit(X_train, Y_train, batch_size=batch_size, epochs=nb_epoch,
-            verbose=1, validation_data=(X_test, Y_test))
-
-    score = model.evaluate(X_test, Y_test, verbose=0)
-    print('Test score:', score[0])
-    print('Test accuracy:', score[1]) # this is the one we care about
+        score = model.evaluate(X_train[val], Y_train[val], verbose=0)
+        print('Val score:', score[0])
+        print('Val accuracy:', score[1]) # this is the one we care about
+        
+        acc_per_fold.append(score[1] * 100)
+        loss_per_fold.append(score[0])
+        
+        # Increase fold number
+        fold_num = fold_num + 1
+    print('Mean Val acc:',sum(acc_per_fold)/len(acc_per_fold))
