@@ -67,7 +67,7 @@ def reshape_for_tf(df):
     # ###
     
     # Reshape for tf (Without SMOTE)
-    X_tf = X_resize.reshape(X_resize.shape[0], 24, 24, 1).astype('float32')
+    X_tf = X_resize.reshape(X_resize.shape[0], img_rows, img_cols, 1).astype('float32')
     
     # convert class vectors to binary class matrices
     Y = to_categorical(y, 8)
@@ -112,17 +112,17 @@ def define_model(nb_filters, kernel_size, input_shape, pool_size):
 
 if __name__ == '__main__':
     # important inputs to the model: don't changes the ones marked KEEP
-    batch_size = 32  # number of training samples used at a time to update the weights
+    batch_size = 32  # number of training samples used at a time to update the weights (default 32)
     nb_classes = 8   # number of output possibilites
-    nb_epoch = 3     # number of passes through the entire train dataset before weights "final"
-    img_rows, img_cols = 24, 24  # the size of the MNIST images KEEP
+    nb_epoch = 6     # number of passes through the entire train dataset before weights "final"
+    img_rows, img_cols = 48, 48  # the size of the resized images
     input_shape = (img_rows, img_cols, 1)  # 1 channel image input (grayscale) KEEP
     nb_filters = 32  # number of convolutional filters to use
     pool_size = (2, 2) # pooling decreases image size, reduces computation, adds translational invariance
-    kernel_size = (3, 3) # convolutional kernel size, slides over image to learn features
+    kernel_size = (5, 5) # convolutional kernel size, slides over image to learn features
     frac = 1 # Fraction of data to sample
     num_folds = 5
-    lr = 0.001 # default 0.001
+    lr = 0.0003 # default 0.001
 
     X_train, X_test, Y_train, Y_test = load_data(frac)
     
@@ -160,7 +160,7 @@ if __name__ == '__main__':
     
     # Plot training vs validation accuracy for last fold
     img_dir = '/home/chris/DSI/wafer-defect-maps/img/'
-    test_name = 'test5_kernel3,3/'
+    test_name = 'test12_lr0,0001_12epoch_batch_64_imgsize32/'
     
     if not os.path.isdir(img_dir + test_name):
 	    os.makedirs(img_dir + test_name)
