@@ -81,12 +81,14 @@ Data modules
 Plotting modules
 * matplotlib
 
+Jupyter Notebook
+
 ### Repository structure
 * img: Figure image files
 * notebooks: Jupyter Notebooks
 * src: Python files
 
-A presentation summarizing the data analysis and results can be found [here](insert pdf link).
+A presentation summarizing the data analysis and results can be found [here](https://github.com/chrisshaffer/wafer-defect-maps/blob/main/Wafer%20Defect%20Classifier.pdf).
 
 ## Data
 This project explores over 800,000 real wafer maps from the MIR-WM811K Corpus, made public by the MIR Lab at the National Taiwan University:
@@ -105,17 +107,17 @@ Next, I dropped the extraneous columns of dieSize, lotName, and waferIndex. The 
 ### EDA
 First, I explored the wafer maps, by plotting them as images. Below are examples from each failure type:
 <p align="center">
-  <img src="https://github.com/chrisshaffer/wafer-defect-maps/blob/main/img/type_example_images.png?raw=true" width="1000" />
+  <img src="https://github.com/chrisshaffer/wafer-defect-maps/blob/main/img/type_example_images_cropped.png?raw=true" width="1000" />
 </p>
 The failure types have patterns, such as lines for the "scratch" class, and outer rings of failed chips for the "edge-ring" class. I noticed that the dimensions of the maps were not uniform, with variation across and within classes. Dimensions varied in the range of roughly 10x10 to more than 100x100. I resized all of the images to a uniform size, and made the size an adjustable parameter.
 
 Next, I explored the class distributions, and was suprised to find significant class imbalances in the training data:
 <p align="center">
-  <img src="https://github.com/chrisshaffer/wafer-defect-maps/blob/main/img/fail_type_dist.png?raw=true" width="500" />
+  <img src="https://github.com/chrisshaffer/wafer-defect-maps/blob/main/img/fail_type_dist.png?raw=true" width="750" />
 </p>
 For instance, "edge-ring" accounted for nearly 50% of the data, and "near-full" (nearly all failed chips) was 0.3% of the data. Additionally, the training and test datasets had different distributions:
 <p align="center">
-  <img src="https://github.com/chrisshaffer/wafer-defect-maps/blob/main/img/fail_type_dist_test.png?raw=true" width="500" />
+  <img src="https://github.com/chrisshaffer/wafer-defect-maps/blob/main/img/fail_type_dist_test.png?raw=true" width="750" />
 </p>
 This adds challenge to the problem, but also makes it more realistic, since the real-world will not follow the training set distribution. I decided to focus on optimizing the metric of recall, since high accuracy and precision can be obtained by ignoring the underrepresented classes
 
@@ -130,6 +132,10 @@ Without tuning the parameters, I found that the initial results of testing could
 
 However, once I tested the modeled by training with the SMOTE oversampled data, it resulted in significantly worse recall and accuracy, and marginally improved precision. A comparison is below:
 
+Before SMOTE: Test recall = 0.46
+
+After SMOTE: Test recall = 0.22
+
 Based on this, I scrapped the idea. However, the class imbalance issue could be further explored in the future using techniques such as imbalanced class weights or augmented training data generators.
 
 ### Final Results
@@ -139,8 +145,11 @@ After testing various hyperparameters I settled on the values below, which resul
 </p>
 
 Note that the validation set performs better than the training set, which is not an error, but is likely due to the sensitivity of sampling of the underrepresented classes for training and validation.
-Here were the final results:
 
+Here were the final parameters and results:
+<p align="center">
+  <img src="https://github.com/chrisshaffer/wafer-defect-maps/blob/main/img/final_results.png?raw=true" width="500" />
+</p>
 While this value can be improved by training longer, using more data, etc., it is an impressive result given the severe class imbalance. CNN models like this have many applications in the inspection equipment subset of the semiconductor manufacturing industry, and companies like KLA-Tencor and Applied Materials have had a recent push to apply data science toward automating quality control processes.
 
 <!-- Contact -->
